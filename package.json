@@ -1,0 +1,16 @@
+{
+    "name": "mody-stash",
+    "version": "1.0.0",
+    "description": "nodejs testing stash with isomorphic-git",
+    "main": "index.js",
+    "scripts": {
+      "test": "test"
+    },
+    "type": "module",
+    "author": "modesty zhang",
+    "license": "MIT",
+    "dependencies": {
+      "isomorphic-git": "^1.25.4"
+    }
+  }
+  
