@@ -1,14 +1,13 @@
 // use isomorphic-git API to clone a github repository
 import * as isogit from 'isomorphic-git';
 import fs from 'fs';
-import http from 'isomorphic-git/http/node/index.cjs';
 
 const dir = './sandbox';
 
 async function stash_push() {
     try {
         const stashBranch = 'stash-branch';
-        // setup: create a temporary branch
+        
         const branch = await isogit.currentBranch({
             fs,
             dir,
@@ -16,11 +15,14 @@ async function stash_push() {
           })
         console.log('current branch:', branch);
 
-        await isogit.branch({ 
-            fs, 
-            dir, 
-            ref: stashBranch,
-            checkout: true });
+        if (stashBranch !== branch) {
+            // setup: create a temporary branch
+            await isogit.branch({ 
+                fs, 
+                dir, 
+                ref: stashBranch,
+                checkout: true });
+        }
 
         // commit to the temporary branch
         const stashCommitOne = await isogit.commit({
