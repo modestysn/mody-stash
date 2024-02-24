@@ -1,7 +1,7 @@
 // use isomorphic-git API to clone a github repository
 import * as isogit from 'isomorphic-git';
 import fs from 'fs';
-import {gitReset} from './git-reset.js';
+import {gitReset} from './git-util.js';
 
 const dir = './sandbox';
 
