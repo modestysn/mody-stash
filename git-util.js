@@ -125,3 +125,135 @@ export async function writeStashReflog(dir, stashCommit, message) {
     await fs.promises.appendFile(`${reflogPath}/stash`, reflogEntry);
 }
 
+async function writeBlobToFile(fs, dir, filepath, blobOid, addToStage = false) {
+    if (!blobOid) 
+        return;
+    try {
+        const { blob } = await isogit.readBlob({ fs, dir, oid: blobOid })
+        const fileContent = Buffer.from(blob).toString('utf8');
+        await fs.promises.writeFile(`${dir}/${filepath}`, fileContent);
+        if (addToStage) {
+            await isogit.add({ fs, dir, filepath });
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+export async function getAndApplyFileStateChanges(dir, commitHash1, commitHash2, addToStage = false) {
+    return isogit.walk({
+      fs,
+      dir,
+      trees: [isogit.TREE({ ref: commitHash1 }), isogit.TREE({ ref: commitHash2 })],
+      map: async function(filepath, [A, B]) {
+        // ignore directories
+        if (filepath === '.' || filepath.startsWith('.git')) {
+          return
+        }
+        if ((await A?.type()) === 'tree' || (await B?.type()) === 'tree') {
+          return
+        }
+  
+        // generate ids
+        const Aoid = await A?.oid()
+        const Boid = await B?.oid()
+  
+        // determine modification type
+        let type = 'equal'
+        if (Aoid !== Boid) {
+          type = 'modify'
+          writeBlobToFile(fs, dir, filepath, Aoid, addToStage);
+        }
+        if (Aoid === undefined) {
+          type = 'add'
+          writeBlobToFile(fs, dir, filepath, Aoid, addToStage);
+        }
+        if (Boid === undefined) {
+          type = 'remove'
+          await fs.promises.unlink(`${dir}/${filepath}`);
+          if (addToStage) {
+            await isogit.remove({ fs, dir, filepath });
+          }
+        }
+        if (Aoid === undefined && Boid === undefined) {
+          console.error('Something weird happened:', A, B);
+        }
+  
+        if (type == 'equal') {
+          return
+        }
+
+        return {
+          path: filepath,
+          type: type,
+          oid: Aoid
+        }
+      },
+    })
+  }
+
+  export async function getTreeObjArrayforWorkingDir(dir) {
+    return isogit.walk({
+      fs,
+      dir,
+      trees: [isogit.WORKDIR(), isogit.TREE({ ref: 'HEAD'})],
+      map: async function(filepath, [A, B]) {
+        // ignore directories
+        if (filepath === '.' || filepath.startsWith('.git') ) {
+          return
+        }
+        const Atype = await A?.type();
+        const Btype = await B?.type();
+        if (Atype === 'special' || Btype === 'special') {
+          return
+        }
+        if (Atype === 'commit' || Btype === 'commit') {
+            return
+        }
+  
+        // generate ids
+        let Aoid = await A?.oid()
+        let Boid = await B?.oid()
+  
+        // determine modification type
+        let type = 'equal'
+        if (Aoid !== Boid) {
+          type = 'modify'
+        }
+        if (Aoid === undefined) {
+          type = 'add'
+        }
+        if (Boid === undefined) {
+          type = 'untracked'
+        }
+        if (Aoid === undefined && Boid === undefined) {
+          console.error('Something weird happened:', A, B);
+          return;
+        }
+
+        if (type === 'untracked') {
+            return;
+        }
+  
+        if (type !== 'equal') { //needs to create the Blob object and add to the tree
+          const fileBuffer = await fs.promises.readFile(`${dir}/${filepath}`);
+          const uint8Blob = new Uint8Array(fileBuffer);
+          Aoid = await isogit.writeBlob({ fs, dir, blob: uint8Blob });
+        }
+
+        // return {
+        //   path: filepath,
+        //   type: type,
+        //   oid: Aoid
+        // }
+        const mode = await A?.mode()
+        return {
+            mode: mode.toString(8),
+            path: filepath,
+            oid: Aoid,
+            type: Atype,
+            op: type
+        }
+      },
+    })
+  }

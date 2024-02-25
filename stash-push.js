@@ -1,8 +1,7 @@
 // use isomorphic-git API to clone a github repository
 import * as isogit from 'isomorphic-git';
 import fs from 'fs';
-import path from 'path';
-import { parseIndexFile, writeStashReflog, getTimezoneOffset } from './git-util.js';
+import { parseIndexFile, writeStashReflog, getTimezoneOffset, getTreeObjArrayforWorkingDir } from './git-util.js';
 
 const dir = './sandbox';
 
@@ -18,8 +17,7 @@ async function stash_push() {
             dir,
             tree: indexTreeObj });
 
-        // create the stash commit with two parents
-        // create a commit from the tree, which has one parent, the current branch HEAD
+        // prepare the stansh commit
         const headCommit = await isogit.resolveRef({
 			fs,
 			dir,
@@ -33,11 +31,13 @@ async function stash_push() {
         });
         const timestamp = Math.floor(Date.now() / 1000); // UTC Unix timestamp in seconds
         const author = { name: 'stash', email: 'modesty@stash.com', timestamp, timezoneOffset: getTimezoneOffset() };
+        
+        // create a commit from the index tree, which has one parent, the current branch HEAD
         const stashCommitOne = await isogit.writeCommit({
 			fs,
 			dir,
             commit: {
-			    message: `stash2-1: WIP on ${branch} - ${new Date().toISOString()}`,
+			    message: `stash3-1: WIP on ${branch} - Index - ${new Date().toISOString()}`,
 			    tree: indexTree, // stashCommitTree
 			    parent: [headCommit],
                 author,
@@ -45,14 +45,34 @@ async function stash_push() {
                 }
             });
 
-        //create another commit from the tree, which has two parents: HEAD and the commit we just made:
+        // create a tree from the current working directory
+        const workingTreeObjects = await getTreeObjArrayforWorkingDir(dir);
+        const workingTree = await isogit.writeTree({
+            fs,
+            dir,
+            tree: workingTreeObjects });
+        // create a commit from the working directory tree, which has one parent, the one we just had
+        const workingHeadCommit = await isogit.writeCommit({
+			fs,
+			dir,
+            commit: {
+			    message: `stash3-2: WIP on ${branch} - ${new Date().toISOString()}`,
+			    tree: workingTree, 
+			    parent: [stashCommitOne],
+                author,
+                committer: author
+                }
+            });
+        
+
+        //create another commit from the tree, which has three parents: HEAD and the commit we just made:
         const stashCommit = await isogit.writeCommit({
 			fs,
 			dir,
             commit: {
                 message: `stash2-2: WIP on ${branch} - ${new Date().toISOString()}`,
                 tree: indexTree, // stashCommitTree
-                parent: [headCommit, stashCommitOne],
+                parent: [headCommit, stashCommitOne, workingHeadCommit],
                 author,
                 committer: author
             }
@@ -84,3 +104,6 @@ async function stash_push() {
 }
 
 stash_push();
+// const workingTreeObjects = await getTreeObjArrayforWorkingDir(dir);
+// console.info('workingTreeObjects:', workingTreeObjects);
+
