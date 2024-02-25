@@ -18,12 +18,18 @@ async function stash_apply() {
             fs,
             dir,
             oid: stashCommitSHA });
-        const { tree: stashTree, parent: stashParents } = stashCommit.commit;
+        const { parent: stashParents } = stashCommit.commit;
 
         // compare the stash commit tree with it's parent commit
         for (let i = 0; i < stashParents.length - 1; i++) {
-            const fileChanges = await getAndApplyFileStateChanges(dir, stashParents[i+1], stashParents[i], i === 0);
-            // console.info(`fileChanges:${stashParents[i]}`, fileChanges);
+            const applyingCommit = await isogit.readCommit({
+                fs,
+                dir,
+                oid: stashParents[i+1] });
+            const wasStaged = applyingCommit.commit.message.startsWith('stash-Index');
+
+            const fileChanges = await getAndApplyFileStateChanges(dir, stashParents[i+1], stashParents[i], wasStaged);
+            console.info(`fileChanges:${stashParents[i]}`, fileChanges);
         }
     
     } catch (e) {

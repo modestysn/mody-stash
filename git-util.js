@@ -126,8 +126,11 @@ export async function writeStashReflog(dir, stashCommit, message) {
 }
 
 async function writeBlobToFile(fs, dir, filepath, blobOid, addToStage = false) {
-    if (!blobOid) 
+    console.info(`Applying ${filepath} from ${blobOid} `);
+
+    if (!blobOid) {
         return;
+    }
     try {
         const { blob } = await isogit.readBlob({ fs, dir, oid: blobOid })
         const fileContent = Buffer.from(blob).toString('utf8');
@@ -161,42 +164,109 @@ export async function getAndApplyFileStateChanges(dir, commitHash1, commitHash2,
         // determine modification type
         let type = 'equal'
         if (Aoid !== Boid) {
-          type = 'modify'
-          writeBlobToFile(fs, dir, filepath, Aoid, addToStage);
+          type = 'modify'          
         }
         if (Aoid === undefined) {
           type = 'add'
-          writeBlobToFile(fs, dir, filepath, Aoid, addToStage);
         }
         if (Boid === undefined) {
           type = 'remove'
-          await fs.promises.unlink(`${dir}/${filepath}`);
-          if (addToStage) {
-            await isogit.remove({ fs, dir, filepath });
-          }
         }
         if (Aoid === undefined && Boid === undefined) {
           console.error('Something weird happened:', A, B);
         }
   
-        if (type == 'equal') {
+        if (type === 'equal') {
           return
+        }
+
+        if (type === 'modify' || type === 'add') {
+          writeBlobToFile(fs, dir, filepath, Aoid, addToStage);
+        }
+        else if (type === 'remove') {
+          await fs.promises.unlink(`${dir}/${filepath}`);
+          if (addToStage) {
+            await isogit.remove({ fs, dir, filepath });
+          }
         }
 
         return {
           path: filepath,
-          type: type,
-          oid: Aoid
+          type,
+          oid: Aoid,
+          addToStage
         }
       },
     })
   }
 
-  export async function getTreeObjArrayforWorkingDir(dir) {
-    return isogit.walk({
+  export async function getTreeObjArrayStage(dir) {
+    let hasStagedChanges = false;
+    const indexTreeObj = await isogit.walk({
       fs,
       dir,
-      trees: [isogit.WORKDIR(), isogit.TREE({ ref: 'HEAD'})],
+      trees: [isogit.STAGE(), isogit.TREE({ ref: 'HEAD'})],
+      map: async function(filepath, [A, B]) {
+        // ignore directories
+        if (filepath === '.') {
+          return
+        }
+        const Atype = await A?.type();
+        const Btype = await B?.type();
+        if (Atype === 'special' || Btype === 'special') {
+          return
+        }
+        if (Atype === 'commit' || Btype === 'commit') {
+            return
+        }
+  
+        // generate ids
+        let Aoid = await A?.oid()
+        let Boid = await B?.oid()
+  
+        // determine modification type
+        let type = 'equal'
+        if (Aoid !== Boid) {
+          type = 'modify'
+        }
+        if (Aoid === undefined) {
+          type = 'add'
+        }
+        if (Boid === undefined) {
+          type = 'remove'
+        }
+        if (Aoid === undefined && Boid === undefined) {
+          console.error('Something weird happened:', A, B);
+          return;
+        }
+
+        if (Aoid === undefined || type === 'remove') {
+            return;
+        }
+
+        if (!hasStagedChanges && type !== 'equal') {
+            hasStagedChanges = true;
+        }
+  
+        const mode = await A?.mode()
+        return {
+            mode: mode.toString(8),
+            path: filepath,
+            oid: Aoid,
+            type: Atype,
+            change: type
+        }
+      },
+    })
+    return hasStagedChanges ? indexTreeObj : [];
+  }
+
+  export async function getTreeObjArrayforWorkingDir(dir, workDirCompareBase) {
+    let hasWorkingChanges = false;
+    const workingTreeObjects = await isogit.walk({
+      fs,
+      dir,
+      trees: [isogit.WORKDIR(), workDirCompareBase],
       map: async function(filepath, [A, B]) {
         // ignore directories
         if (filepath === '.' || filepath.startsWith('.git') ) {
@@ -239,21 +309,18 @@ export async function getAndApplyFileStateChanges(dir, commitHash1, commitHash2,
           const fileBuffer = await fs.promises.readFile(`${dir}/${filepath}`);
           const uint8Blob = new Uint8Array(fileBuffer);
           Aoid = await isogit.writeBlob({ fs, dir, blob: uint8Blob });
+          hasWorkingChanges = true;
         }
 
-        // return {
-        //   path: filepath,
-        //   type: type,
-        //   oid: Aoid
-        // }
         const mode = await A?.mode()
         return {
             mode: mode.toString(8),
             path: filepath,
             oid: Aoid,
             type: Atype,
-            op: type
+            change: type
         }
       },
     })
+    return hasWorkingChanges ? workingTreeObjects : [];
   }

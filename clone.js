@@ -1,7 +1,7 @@
 // use isomorphic-git API to clone a github repository
 import * as isogit from 'isomorphic-git';
 import fs from 'fs';
-import http from 'isomorphic-git/http/node/index.cjs';
+import http from 'isomorphic-git/http/node/index.js';
 
 const dir = './sandbox';
 async function clone() {
