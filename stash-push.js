@@ -102,7 +102,7 @@ async function stash_push() {
             dir,
             ref: 'refs/stash',
             value: stashCommit,
-            force: true //TODO: overwrites existing stash commit current, needs to preserve it
+            force: true 
         });
         
         // write the stash commit to the logs

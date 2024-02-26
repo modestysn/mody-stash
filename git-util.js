@@ -125,6 +125,22 @@ export async function writeStashReflog(dir, stashCommit, message) {
     await fs.promises.appendFile(`${reflogPath}/stash`, reflogEntry);
 }
 
+export async function readAllReflogEntries(dir, ref) {
+    const reflogPath = `${dir}/.git/logs/refs/${ref}`;
+    const reflogEntries = [];
+    
+    const reflogBuffer = await fs.promises.readFile(reflogPath);
+    const reflogString = reflogBuffer.toString('utf8');
+    const reflogLines = reflogString.split('\n');
+    for (const line of reflogLines) {
+        if (line) {
+            reflogEntries.push(line);
+        }
+    }
+    return reflogEntries;
+}
+
+
 async function writeBlobToFile(fs, dir, filepath, blobOid, addToStage = false) {
     console.info(`Applying ${filepath} from ${blobOid} `);
 
