@@ -5,7 +5,7 @@ import {getAndApplyFileStateChanges} from './git-util.js';
 
 const dir = './sandbox';
 
-async function stash_apply() {
+export async function stash_apply() {
     try {        
         // get the stash commit SHA-1 from the stash ref
         const stashCommitSHA = await isogit.resolveRef({
@@ -31,10 +31,12 @@ async function stash_apply() {
             const fileChanges = await getAndApplyFileStateChanges(dir, stashParents[i+1], stashParents[i], wasStaged);
             console.info(`fileChanges:${stashParents[i]}`, fileChanges);
         }
+
+        return stashCommitSHA;
     
     } catch (e) {
         console.error(e);
     }
 }
 
-stash_apply();
+// stash_apply();
