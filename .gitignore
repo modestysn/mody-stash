@@ -30,3 +30,4 @@ replay_pid*
 */.vscode-test/
 *.vsix
 *.vscode-test-web/
+*.vscode
