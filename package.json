@@ -4,7 +4,7 @@
     "description": "nodejs testing stash with isomorphic-git",
     "main": "index.js",
     "scripts": {
-      "test": "test"
+      "test": "ide updated"
     },
     "type": "module",
     "author": "modesty zhang",
