@@ -1,7 +1,7 @@
 {
     "name": "mody-stash",
-    "version": "0.1.10",
-    "description": "nodejs testing stash with isomorphic-git project",
+    "version": "0.1.11",
+    "description": "nodejs testing stash with isomorphic-git",
     "main": "index.ts",
     "scripts": {
       "test": "jest",
@@ -11,7 +11,7 @@
     "author": "modestysn",
     "license": "MIT",
     "dependencies": {
-      "isomorphic-git": "1.25.4"
+      "isomorphic-git": "^1.25.5"
     }
   }
   
