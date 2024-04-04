@@ -1,6 +1,6 @@
 {
     "name": "mody-stash",
-    "version": "0.1.31",
+    "version": "0.1.32",
     "description": "nodejs testing stash with isomorphic-git",
     "main": "index.ts",
     "scripts": {
@@ -12,6 +12,7 @@
     "license": "MIT",
     "dependencies": {
       "isomorphic-git": "^1.25.5"
-    }
+    },
+    "repo": "https://github.com/modestysn/mody-stash"
   }
   
