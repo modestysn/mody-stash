@@ -1,6 +1,6 @@
 {
     "name": "mody-stash",
-    "version": "0.1.28",
+    "version": "0.1.29",
     "description": "nodejs testing stash with isomorphic-git",
     "main": "index.ts",
     "scripts": {
