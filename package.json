@@ -14,7 +14,7 @@
     "dependencies": {
       "isomorphic-git": "^1.25.5"
     },
-    "repo": "https://github.com/patrick/mody-stash",
-    "new": "this is a new change"
+    "repo": "https://github.com/modestysn/mody-stash",
+    "publisher": "servicenow"
   }
   
