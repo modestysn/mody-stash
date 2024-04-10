@@ -1,1 +1,1 @@
-console.log("this is a test from sub folder")
+window.console.log("this is a test from sub folder")
